@@ -127,13 +127,17 @@ def evaluate_stop_factors(
     t1 = by_code.get("T1")
     if (t1 and t1.value is not None and t1.value < s.tax_burden
             and volumes.gross_outflow > s.tax_burden_turnover_floor):
-        stops.append(f"S2. Налоговая нагрузка {t1.value * 100:.2f}\u00a0%".replace(".", ",")
-                     + " при обороте по списанию "
-                     + f"{volumes.gross_outflow:,.0f}".replace(",", "\u00a0") + " ₽")
+        # десятичная запятая ставится только в числе: замена по всей строке
+        # превращала «S2.» в «S2,»
+        burden = f"{t1.value * 100:.2f}".replace(".", ",")
+        turnover = f"{volumes.gross_outflow:,.0f}".replace(",", "\u00a0")
+        stops.append(f"S2. Налоговая нагрузка {burden}\u00a0% "
+                     f"при обороте по списанию {turnover} ₽")
 
     t11 = by_code.get("T11")
     if t11 and t11.value is not None and t11.value > s.enforcement_share:
-        stops.append(f"S3. Взыскания по исполнительным документам {t11.value * 100:.1f}\u00a0% оборота".replace(".", ","))
+        share = f"{t11.value * 100:.1f}".replace(".", ",")
+        stops.append(f"S3. Взыскания по исполнительным документам {share}\u00a0% оборота")
 
     window = monthly[-s.negative_fcf_window:]
     negative = sum(1 for m in window if m.fcf < 0)

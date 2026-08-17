@@ -123,3 +123,20 @@ def test_decision_matrix():
     assert make_decision([Indicator(code="T4", name="x", status=Status.RED)], [], v,
                          DEFAULT_CONFIG).code == Decision.MANUAL_REVIEW
     assert make_decision([], ["S1. что-то"], v, DEFAULT_CONFIG).code == Decision.DECLINE
+
+
+def test_stop_factor_codes_are_not_mangled_by_decimal_comma():
+    """Регрессия: замена точки на запятую по всей строке ломала код «S2.»."""
+    from potok51.models import Check, Indicator
+    m = monthly(5_000_000, 3_000_000)
+    v = volumes(5_000_000, 3_000_000)
+    v.gross_outflow = 500_000_000
+    stops = _stops([
+        Indicator(code="T1", name="Налоговая нагрузка", value=0.0007, status=Status.RED),
+        Indicator(code="T11", name="Взыскание", value=0.08, status=Status.RED),
+    ], m, v)
+    codes = [s.split(".")[0] for s in stops]
+    assert "S2" in codes and "S3" in codes
+    for s in stops:
+        assert not s.startswith("S2,") and not s.startswith("S3,")
+        assert s[:3] in ("S1.", "S2.", "S3.", "S4.", "S5.", "S6.", "S7.")
