@@ -7,8 +7,7 @@ from pathlib import Path
 
 import markdown
 
-SRC = Path("docs/ТЗ_Поток51_прототип.md")
-DST = Path("docs/ТЗ_Поток51_прототип.html")
+
 
 SHELL = """<!doctype html>
 <html lang="ru"><head><meta charset="utf-8">
@@ -71,7 +70,10 @@ SHELL = """<!doctype html>
     .print-toc a{{color:var(--ink);text-decoration:none}}
     main h2{{page-break-before:auto;page-break-after:avoid;font-size:14pt;margin-top:20pt}}
     main h3,main h4{{page-break-after:avoid}}
-    table,pre,blockquote{{page-break-inside:auto}}
+    table,blockquote{{page-break-inside:auto}}
+    /* блок псевдокода не должен разрываться: при переносе фон подложки
+       не дорисовывается и последняя строка повисает вне рамки */
+    pre{{page-break-inside:avoid}}
     tr{{page-break-inside:avoid}}
     thead{{display:table-header-group}}
     p,li{{max-width:none;orphans:3;widows:3}}
@@ -108,8 +110,8 @@ SHELL = """<!doctype html>
 </body></html>"""
 
 
-def build() -> Path:
-    raw = SRC.read_text(encoding="utf-8")
+def build(src: Path, dst: Path, abstract: str) -> Path:
+    raw = src.read_text(encoding="utf-8")
     head, body_md = raw.split("\n---\n", 1)
 
     title = re.search(r"^# (.+)$", head, re.M).group(1).strip()
@@ -125,21 +127,39 @@ def build() -> Path:
     # цифра и знак процента не должны разъезжаться по разным строкам
     body_html = re.sub(r"(\d)\s%", "\\1\u00a0%", body_html)
 
-    abstract = (
-        "Прототип принимает выгрузку карточки счёта 51 из 1С, разбирает её в структурированный "
-        "поток операций, отделяет реальную операционную выручку от транзита, внутригрупповых "
-        "переводов, заёмных денег и возвратов, считает пятнадцать риск-индикаторов и выдаёт "
-        "кредитному аналитику обоснованный лимит с полной трассируемостью каждой цифры "
-        "до конкретных строк исходного файла."
-    )
     html = SHELL.format(
         title=title, subtitle=subtitle, kicker=title, abstract=abstract,
         meta=meta_html, toc=md.toc, body=body_html,
     )
-    DST.write_text(html, encoding="utf-8")
-    return DST
+    dst.write_text(html, encoding="utf-8")
+    return dst
+
+
+DOCS = {
+    "tz": (
+        Path("docs/ТЗ_Поток51_прототип.md"),
+        Path("docs/ТЗ_Поток51_прототип.html"),
+        "Прототип принимает выгрузку карточки счёта 51 из 1С, разбирает её в структурированный "
+        "поток операций, отделяет реальную операционную выручку от транзита, внутригрупповых "
+        "переводов, заёмных денег и возвратов, считает пятнадцать риск-индикаторов и выдаёт "
+        "кредитному аналитику обоснованный лимит с полной трассируемостью каждой цифры "
+        "до конкретных строк исходного файла.",
+    ),
+    "spec": (
+        Path("docs/Спецификация_алгоритмов_Поток51.md"),
+        Path("docs/Спецификация_алгоритмов_Поток51.html"),
+        "Реализационная спецификация: псевдокод семи алгоритмов, полные справочники правил "
+        "классификации, формулы пятнадцати индикаторов и четырёх ограничителей лимита, "
+        "реестр калибруемых констант и эталонные тест-векторы для сверки собственной "
+        "реализации. Документ самодостаточен: воспроизведение не требует чтения исходного кода.",
+    ),
+}
 
 
 if __name__ == "__main__":
-    path = build()
-    print(f"{path}  {path.stat().st_size / 1024:.0f} КБ")
+    import sys
+    keys = sys.argv[1:] or list(DOCS)
+    for key in keys:
+        src, dst, abstract = DOCS[key]
+        path = build(src, dst, abstract)
+        print(f"{path}  {path.stat().st_size / 1024:.0f} КБ")
