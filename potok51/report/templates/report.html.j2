@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Поток 51 — {{ a.meta.organization or a.source_filename }}</title>
+<style>
+  :root{
+    --bg:#ffffff; --ink:#24292f; --muted:#5b6570; --line:#e3e6ea; --soft:#f6f8fa;
+    --blue:#1f6feb; --green:#0f8f4f; --amber:#c9820a; --red:#c0392b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.55 "Helvetica Neue",Helvetica,Arial,"Segoe UI",sans-serif;font-variant-ligatures:none;}
+  .wrap{max-width:1060px;margin:0 auto;padding:28px 24px 72px}
+  header.top{border-bottom:2px solid var(--ink);padding-bottom:18px;margin-bottom:24px}
+  .kicker{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+  h1{font-size:27px;margin:6px 0 4px;font-weight:650;letter-spacing:-.01em}
+  h2{font-size:19px;margin:34px 0 12px;padding-top:14px;border-top:1px solid var(--line);font-weight:640}
+  h3{font-size:14px;margin:18px 0 8px;color:var(--muted);font-weight:600}
+  .sub{color:var(--muted);font-size:13.5px}
+  .verdict{display:flex;gap:22px;align-items:stretch;flex-wrap:wrap;margin-top:18px}
+  .badge{padding:14px 20px;border-radius:8px;color:#fff;font-weight:650;font-size:17px;
+    display:flex;align-items:center;min-width:230px}
+  .badge.AUTO_APPROVE{background:var(--green)} .badge.MANUAL_REVIEW{background:var(--amber)}
+  .badge.DECLINE{background:var(--red)}
+  .limitbox{flex:1;min-width:260px;border:1px solid var(--line);border-radius:8px;padding:12px 18px;background:var(--soft)}
+  .limitbox .big{font-size:26px;font-weight:660;letter-spacing:-.02em;white-space:nowrap}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:18px 0 6px}
+  .tile{border:1px solid var(--line);border-radius:8px;padding:13px 15px}
+  .tile .v{font-size:22px;font-weight:640;letter-spacing:-.01em}
+  .tile .l{font-size:12px;color:var(--muted);margin-top:3px}
+  .lights{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:10px}
+  .light{border:1px solid var(--line);border-left-width:5px;border-radius:7px;padding:10px 13px;background:#fff}
+  .light.GREEN{border-left-color:var(--green)} .light.AMBER{border-left-color:var(--amber)}
+  .light.RED{border-left-color:var(--red)} .light.NA{border-left-color:#8b949e}
+  .light .code{font-size:11px;color:var(--muted);letter-spacing:.05em}
+  .light .name{font-weight:600;font-size:13.5px;margin:2px 0}
+  .light .val{font-size:19px;font-weight:650}
+  .light .exp{font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.45}
+  table{border-collapse:collapse;width:100%;font-size:13px;margin:8px 0 4px}
+  th,td{border-bottom:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}
+  th{background:var(--soft);font-weight:600;font-size:12px;color:var(--muted);
+     text-transform:uppercase;letter-spacing:.04em}
+  td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  td.mon,.nw{white-space:nowrap}
+  details{border:1px solid var(--line);border-radius:7px;padding:8px 12px;margin:8px 0;background:#fff}
+  details>summary{cursor:pointer;font-size:13px;color:var(--blue);font-weight:550}
+  details[open]>summary{margin-bottom:8px}
+  .chart{width:100%;height:auto;display:block;margin:10px 0}
+  .callout{border-left:4px solid var(--blue);background:var(--soft);padding:11px 15px;border-radius:0 7px 7px 0;
+    font-size:13.5px;margin:12px 0}
+  .callout.bad{border-left-color:var(--red)}
+  .formula{font-size:12.5px;color:var(--muted);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    background:var(--soft);padding:7px 11px;border-radius:6px;margin:5px 0}
+  .ok{color:var(--green);font-weight:600} .fail{color:var(--red);font-weight:600}
+  .warn{color:var(--amber);font-weight:600}
+  footer{margin-top:44px;padding-top:14px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted)}
+  @media print{
+    body{font-size:9.6pt;line-height:1.45} .wrap{max-width:none;padding:0}
+    header.top{break-after:avoid}
+    .tiles{grid-template-columns:repeat(4,1fr);gap:7px}
+    .lights{grid-template-columns:repeat(3,1fr);gap:7px}
+    .light{padding:8px 10px} .light .val{font-size:15px} .light .exp{font-size:9px}
+    .tile,.light,.callout{break-inside:avoid}
+    tr{break-inside:avoid} thead{display:table-header-group}
+    table{break-inside:auto}
+    h2{break-after:avoid;break-before:auto} h3{break-after:avoid}
+    /* раскрывающиеся блоки в печати схлопнуты: в бумажной версии остаётся
+       строка со ссылкой на детализацию, сами операции смотрятся в интерфейсе */
+    details{border:none;padding:0;margin:3px 0;break-inside:avoid}
+    details>summary{display:list-item;list-style:none;color:#5b6570;font-weight:500;font-size:9pt}
+    details>summary::before{content:"→ "}
+    details table{display:none}
+    .chart{break-inside:avoid}
+    @page{size:A4;margin:17mm 12mm}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="kicker">Поток 51 · кредитный анализ по карточке счёта 51 · версия правил {{ a.rules_version }}</div>
+  <h1>{{ a.meta.organization or "Клиент не определён" }}</h1>
+  <div class="sub">
+    ИНН {{ a.meta.inn or "—" }} ·
+    период {{ a.monthly[0].month|month_ru if a.monthly }} — {{ a.monthly[-1].month|month_ru if a.monthly }} ({{ a.monthly|length }} мес) ·
+    отрасль: {{ industry_ru }} ·
+    счетов в карточке: {{ a.meta.accounts|length }} ·
+    операций: {{ a.metrics.operations|int }}
+  </div>
+
+  <div class="verdict">
+    <div class="badge {{ a.decision.code.value }}">{{ decision_ru }}</div>
+    <div class="limitbox">
+      <div class="sub">Рекомендуемый лимит на пополнение оборотных средств</div>
+      <div class="big">{{ a.limit.range_low|money }} — {{ a.limit.final|money }} ₽</div>
+      <div class="sub">
+        {% if a.limit.binding_constraint %}
+          связывающий ограничитель: <b>{{ a.limit.binding_constraint }}. {{ a.limit.constraint_labels[a.limit.binding_constraint] }}</b>
+          (<span class="nw">{{ a.limit.base|money }} ₽</span>),<br>понижающий множитель флагов ×{{ "%.2f"|format(a.limit.multiplier)|replace(".", ",") }}
+        {% else %}расчёт не выполнялся{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% if a.decision.stop_factors %}
+  <div class="callout bad">
+    <b>Стоп-факторы кредитной политики:</b>
+    <ul style="margin:6px 0 0 18px;padding:0">{% for s in a.decision.stop_factors %}<li>{{ s }}</li>{% endfor %}</ul>
+  </div>
+  {% elif a.decision.reasons %}
+  <div class="callout">
+    <b>Основания решения:</b>
+    <ul style="margin:6px 0 0 18px;padding:0">{% for r in a.decision.reasons %}<li>{{ r }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+</header>
+
+<div class="tiles">
+  <div class="tile"><div class="v">{{ (a.volumes.adjusted_revenue / months)|money }}</div>
+    <div class="l">Очищенная выручка, в месяц</div></div>
+  <div class="tile"><div class="v">{{ (a.volumes.fcf / months)|money }}</div>
+    <div class="l">Свободный операционный поток, в месяц</div></div>
+  <div class="tile"><div class="v">{{ ind.T3.display }}</div>
+    <div class="l">Транзитность притока</div></div>
+  <div class="tile"><div class="v">{{ ind.T1.display }}</div>
+    <div class="l">Налоговая нагрузка к обороту по списанию</div></div>
+</div>
+
+<h2>1. Светофоры риска</h2>
+<div class="lights">
+  {% for i in a.indicators %}
+  <div class="light {{ i.status.value }}">
+    <div class="code">{{ i.code }}</div>
+    <div class="name">{{ i.name }}</div>
+    <div class="val">{{ i.display }}</div>
+    <div class="exp">{{ i.explanation }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<h2>2. Мост от валового оборота к очищенной выручке</h2>
+<p class="sub">Каждая ступень исключения раскрывается до конкретных строк исходной карточки.</p>
+{{ chart_waterfall|safe }}
+<table>
+  <thead><tr><th>Показатель</th><th class="num">Сумма, ₽</th><th class="num">Доля притока</th></tr></thead>
+  <tbody>
+    <tr><td><b>Валовой приток по дебету счёта 51</b></td>
+        <td class="num">{{ a.volumes.gross_inflow|money }}</td><td class="num">100,0 %</td></tr>
+    {% for e in a.volumes.exclusions %}
+    <tr><td>минус {{ e.label }}</td><td class="num">−{{ e.amount|money }}</td>
+        <td class="num">{{ e.share|pct }}</td></tr>
+    {% endfor %}
+    <tr><td><b>Квалифицированный приток</b></td>
+        <td class="num"><b>{{ a.volumes.qualified_inflow|money }}</b></td>
+        <td class="num">{{ (a.volumes.qualified_inflow / a.volumes.gross_inflow if a.volumes.gross_inflow else 0)|pct }}</td></tr>
+    <tr><td><b>Очищенная выручка</b> (за вычетом возвратов покупателям)</td>
+        <td class="num"><b>{{ a.volumes.adjusted_revenue|money }}</b></td>
+        <td class="num">{{ (a.volumes.adjusted_revenue / a.volumes.gross_inflow if a.volumes.gross_inflow else 0)|pct }}</td></tr>
+    <tr><td>минус операционный отток</td><td class="num">−{{ a.volumes.operating_outflow|money }}</td><td class="num"></td></tr>
+    <tr><td><b>Свободный операционный поток</b></td>
+        <td class="num"><b>{{ a.volumes.fcf|money }}</b></td><td class="num"></td></tr>
+  </tbody>
+</table>
+
+{% for e in a.volumes.exclusions %}
+{% if e.rows %}
+<details>
+  <summary>Детализация: {{ e.label }} — {{ e.amount|money }} ₽, операций {{ e.rows|length }}</summary>
+  {{ rows_table(e.rows) }}
+</details>
+{% endif %}
+{% endfor %}
+
+<h2>3. Помесячная динамика</h2>
+<p class="sub">Столбцы — очищенная выручка, линия — свободный операционный поток.</p>
+{{ chart_monthly|safe }}
+<table>
+  <thead><tr><th>Месяц</th><th class="num">Валовой приток</th><th class="num">Очищенная выручка</th>
+    <th class="num">Операционный отток</th><th class="num">Свободный поток</th></tr></thead>
+  <tbody>
+  {% for m in a.monthly %}
+    <tr><td class="mon">{{ m.month|month_ru }}</td><td class="num">{{ m.gross_inflow|money }}</td>
+      <td class="num">{{ m.adjusted_revenue|money }}</td><td class="num">{{ m.operating_outflow|money }}</td>
+      <td class="num" {% if m.fcf < 0 %}style="color:#c0392b;font-weight:600"{% endif %}>{{ m.fcf|money }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h2>4. Расчёт лимита</h2>
+<p class="sub">Лимит — минимум из четырёх независимых ограничителей. Единой формулы нет намеренно:
+андеррайтеру нужен ответ не «сколько», а «почему столько».</p>
+{{ chart_constraints|safe }}
+{% for code, value in a.limit.constraints.items() %}
+<h3>{{ code }}. {{ a.limit.constraint_labels[code] }}{% if code == a.limit.binding_constraint %} — связывающий{% endif %}</h3>
+<div class="formula">{{ a.limit.constraint_formulas[code] }}</div>
+{% endfor %}
+<table>
+  <tbody>
+    <tr><td>Базовый лимит (минимум из ограничителей)</td><td class="num">{{ a.limit.base|money }} ₽</td></tr>
+    <tr><td>Понижающий множитель флагов (жёлтый ×0,90, красный ×0,70, пол 0,40)</td>
+        <td class="num">×{{ "%.3f"|format(a.limit.multiplier)|replace(".", ",") }}</td></tr>
+    <tr><td><b>Итоговый лимит</b> (округление вниз до 100 тыс. ₽)</td>
+        <td class="num"><b>{{ a.limit.final|money }} ₽</b></td></tr>
+    <tr><td>Рекомендуемый диапазон к одобрению</td>
+        <td class="num">{{ a.limit.range_low|money }} — {{ a.limit.range_high|money }} ₽</td></tr>
+  </tbody>
+</table>
+
+<h2>5. Контрагенты</h2>
+<h3>Крупнейшие плательщики</h3>
+<table>
+  <thead><tr><th>Контрагент</th><th class="num">Поступления, ₽</th><th class="num">Доля</th><th class="num">Операций</th></tr></thead>
+  <tbody>{% for c in a.top_inflow %}
+    <tr><td>{{ c.name }}</td><td class="num">{{ c.amount|money }}</td>
+        <td class="num">{{ c.share|pct }}</td><td class="num">{{ c.operations }}</td></tr>{% endfor %}</tbody>
+</table>
+<h3>Крупнейшие получатели</h3>
+<table>
+  <thead><tr><th>Контрагент</th><th class="num">Списания, ₽</th><th class="num">Доля</th><th class="num">Операций</th></tr></thead>
+  <tbody>{% for c in a.top_outflow %}
+    <tr><td>{{ c.name }}</td><td class="num">{{ c.amount|money }}</td>
+        <td class="num">{{ c.share|pct }}</td><td class="num">{{ c.operations }}</td></tr>{% endfor %}</tbody>
+</table>
+
+<h2>6. Не классифицировано</h2>
+{% if a.unclassified_top %}
+<p class="sub">Операции, не покрытые ни корсчётом, ни словарём назначений. Требуют ручной доразметки.</p>
+<table>
+  <thead><tr><th>Строка</th><th>Дата</th><th>Контрагент</th><th>Назначение</th>
+    <th>Корсчёт</th><th class="num">Сумма, ₽</th></tr></thead>
+  <tbody>{% for u in a.unclassified_top %}
+    <tr><td>{{ u.row_no }}</td><td>{{ u.date }}</td><td>{{ u.counterparty or "—" }}</td>
+      <td>{{ (u.purpose or "—")[:110] }}</td><td>{{ u.corr_account or "—" }}</td>
+      <td class="num">{{ u.amount|money }}</td></tr>{% endfor %}</tbody>
+</table>
+{% else %}
+<p class="sub">Неклассифицированных операций нет: правила покрыли
+{{ a.metrics.auto_classified_share|pct }} оборота.</p>
+{% endif %}
+
+<h2>7. Приложение. Качество данных и параметры расчёта</h2>
+<table>
+  <thead><tr><th>Код</th><th>Проверка</th><th>Результат</th><th>Детали</th></tr></thead>
+  <tbody>{% for c in a.data_quality.checks %}
+    <tr><td>{{ c.code }}</td><td>{{ c.name }}{% if c.critical %} <span class="sub">(критическая)</span>{% endif %}</td>
+      <td>{% if c.passed %}<span class="ok">пройдена</span>
+          {%- elif c.critical %}<span class="fail">не пройдена</span>
+          {%- else %}<span class="warn">предупреждение</span>{% endif %}</td>
+      <td class="sub">{{ c.detail }}</td></tr>{% endfor %}</tbody>
+</table>
+<table>
+  <tbody>
+    <tr><td>Доля оборота, размеченная автоматически</td><td class="num">{{ a.metrics.auto_classified_share|pct }}</td></tr>
+    <tr><td>Время анализа</td><td class="num">{{ a.metrics.analysis_time_sec }} с</td></tr>
+    <tr><td>Найдено транзитных пар</td><td class="num">{{ a.metrics.transit_pairs|int }}</td></tr>
+    <tr><td>Пар переводов между своими счетами</td><td class="num">{{ a.metrics.internal_pairs|int }}</td></tr>
+    <tr><td>Дублей эквайринга</td><td class="num">{{ a.metrics.acquiring_duplicates|int }}</td></tr>
+  </tbody>
+</table>
+
+<footer>
+  Файл: {{ a.source_filename }} · SHA-256 {{ a.source_sha256[:16] }}… · анализ {{ a.analysis_id[:8] }} ·
+  сформирован {{ a.created_at }} · версия правил {{ a.rules_version }}.<br>
+  Расчёт носит рекомендательный характер и не заменяет решение уполномоченного органа банка.
+  Индикаторы T1–T6 воспроизводят логику Методических рекомендаций Банка России 18-МР и используются
+  как кредитные факторы риска.
+</footer>
+
+</div>
+</body>
+</html>

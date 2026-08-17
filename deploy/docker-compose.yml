@@ -1,0 +1,32 @@
+services:
+  potok51:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: potok51:1.0.0
+    container_name: potok51
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      # только петлевой интерфейс: публикацию наружу делает обратный прокси
+      - "127.0.0.1:${POTOK51_PORT:-8051}:8000"
+    volumes:
+      - potok51_data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=4).status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+volumes:
+  potok51_data:

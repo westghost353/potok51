@@ -1,0 +1,1407 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Техническое задание — Прототип «Поток 51» — расчёт кредитного лимита на пополнение оборотных средств по карточке счёта 51</title>
+<style>
+  :root{--bg:#fff;--ink:#1f2328;--muted:#5b6570;--line:#e3e6ea;--soft:#f6f8fa;
+        --blue:#1f6feb;--green:#0f8f4f;--amber:#c9820a;--red:#c0392b;--nav:262px}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.6 "Helvetica Neue",Helvetica,Arial,"Segoe UI",sans-serif;font-variant-ligatures:none}
+  .progress{position:fixed;top:0;left:0;height:3px;background:var(--blue);width:0;z-index:50}
+  .layout{display:flex;max-width:1250px;margin:0 auto;gap:34px;padding:0 26px}
+  nav{width:var(--nav);flex:0 0 var(--nav);position:sticky;top:0;align-self:flex-start;
+    max-height:100vh;overflow:auto;padding:34px 0 40px}
+  nav .t{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+  nav ul{list-style:none;margin:0;padding:0} nav ul ul{display:none}
+  nav a{display:block;color:var(--muted);text-decoration:none;font-size:12.5px;padding:4px 9px;
+    border-left:2px solid transparent;line-height:1.35}
+  nav a:hover{color:var(--ink)}
+  nav a.on{color:var(--blue);border-left-color:var(--blue);font-weight:600}
+  main{flex:1;min-width:0;padding:34px 0 90px}
+  .cover{border-bottom:2px solid var(--ink);padding-bottom:24px;margin-bottom:8px}
+  .kicker{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .cover h1{font-size:31px;line-height:1.16;margin:10px 0 12px;font-weight:660;letter-spacing:-.02em}
+  .abstract{font-size:15.5px;color:var(--muted);max-width:74ch;margin:0 0 4px}
+  .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:18px}
+  .meta>div{border:1px solid var(--line);border-radius:8px;padding:11px 14px}
+  .meta .k{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .meta .v{font-size:14px;font-weight:600;margin-top:2px}
+  main h2{font-size:21px;margin:42px 0 12px;padding-top:16px;border-top:1px solid var(--line);
+    font-weight:640;letter-spacing:-.01em;scroll-margin-top:16px}
+  main h3{font-size:16px;margin:24px 0 8px;font-weight:620}
+  main h4{font-size:14px;margin:18px 0 6px;font-weight:620;color:var(--muted)}
+  p,li{max-width:80ch}
+  table{border-collapse:collapse;width:100%;font-size:13px;margin:14px 0}
+  th,td{border-bottom:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:var(--soft);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;
+     color:var(--muted);font-weight:600}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;
+    background:var(--soft);padding:1px 5px;border-radius:4px}
+  pre{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:13px 15px;
+    overflow-x:auto;font-size:12px;line-height:1.45}
+  pre code{background:none;padding:0;font-size:12px}
+  blockquote{border-left:4px solid var(--blue);background:var(--soft);margin:16px 0;
+    padding:10px 16px;border-radius:0 8px 8px 0}
+  hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+  strong{font-weight:640}
+  a{color:var(--blue)}
+  .print-toc{display:none}
+  @media print{
+    nav,.progress{display:none} .layout{display:block;max-width:none;padding:0} main{padding:0}
+    body{font-size:9.4pt;line-height:1.45}
+    .cover{page-break-after:always;padding-top:26mm;border-bottom:none}
+    .cover h1{font-size:23pt;line-height:1.18} .abstract{font-size:11pt}
+    .print-toc{display:block;page-break-after:always}
+    .print-toc h2{border-top:none;padding-top:0;margin-top:0}
+    .print-toc ul{list-style:none;padding-left:0;font-size:10pt;line-height:1.9}
+    .print-toc ul ul{display:none}
+    .print-toc a{color:var(--ink);text-decoration:none}
+    main h2{page-break-before:auto;page-break-after:avoid;font-size:14pt;margin-top:20pt}
+    main h3,main h4{page-break-after:avoid}
+    table,pre,blockquote{page-break-inside:auto}
+    tr{page-break-inside:avoid}
+    thead{display:table-header-group}
+    p,li{max-width:none;orphans:3;widows:3}
+    pre{white-space:pre-wrap;word-break:break-word}
+  }
+  @media (max-width:960px){nav{display:none}.layout{padding:0 18px}}
+</style></head><body>
+<div class="progress" id="pr"></div>
+<div class="layout">
+<nav><div class="t">Содержание</div><div class="toc">
+<ul>
+<li><a href="#1">1. Контекст и назначение</a></li>
+<li><a href="#2">2. Цели и метрики</a></li>
+<li><a href="#3-mvp">3. Границы MVP</a></li>
+<li><a href="#4">4. Архитектура</a></li>
+<li><a href="#5-12-51">5. Модуль 1–2. Чтение и нормализация карточки счёта 51</a></li>
+<li><a href="#6-4">6. Модуль 4. Классификация операций</a></li>
+<li><a href="#7-5-linker">7. Модуль 5. Парное сопоставление (LINKER)</a></li>
+<li><a href="#8-67">8. Модуль 6–7. Очистка потока и индикаторы</a></li>
+<li><a href="#9-8">9. Модуль 8. Расчёт лимита</a></li>
+<li><a href="#10">10. Выходные артефакты</a></li>
+<li><a href="#11-api">11. API и интерфейс</a></li>
+<li><a href="#12_1">12. Синтетические данные</a></li>
+<li><a href="#13-">13. Тест-план</a></li>
+<li><a href="#14_1">14. Развёртывание</a></li>
+<li><a href="#15-v2">15. Бэклог v2</a></li>
+<li><a href="#16">16. Риски прототипа</a></li>
+<li><a href="#_1">Приложение А. Отклонения реализации от исходного ТЗ</a></li>
+</ul>
+</div>
+</nav>
+<main>
+<div class="cover">
+  <div class="kicker">Техническое задание</div>
+  <h1>Прототип «Поток 51» — расчёт кредитного лимита на пополнение оборотных средств по карточке счёта 51</h1>
+  <p class="abstract">Прототип принимает выгрузку карточки счёта 51 из 1С, разбирает её в структурированный поток операций, отделяет реальную операционную выручку от транзита, внутригрупповых переводов, заёмных денег и возвратов, считает пятнадцать риск-индикаторов и выдаёт кредитному аналитику обоснованный лимит с полной трассируемостью каждой цифры до конкретных строк исходного файла.</p>
+  <div class="meta"><div><div class="k">Версия</div><div class="v">1.0</div></div><div><div class="k">Дата</div><div class="v">17.08.2026</div></div><div><div class="k">Тип документа</div><div class="v">ТЗ на разработку прототипа (MVP)</div></div><div><div class="k">Исполнитель разработки</div><div class="v">Claude Code</div></div><div><div class="k">Целевая среда</div><div class="v">Linux-сервер заказчика, Docker Compose под systemd</div></div></div>
+</div>
+<div class="print-toc"><h2>Содержание</h2><div class="toc">
+<ul>
+<li><a href="#1">1. Контекст и назначение</a></li>
+<li><a href="#2">2. Цели и метрики</a></li>
+<li><a href="#3-mvp">3. Границы MVP</a></li>
+<li><a href="#4">4. Архитектура</a></li>
+<li><a href="#5-12-51">5. Модуль 1–2. Чтение и нормализация карточки счёта 51</a></li>
+<li><a href="#6-4">6. Модуль 4. Классификация операций</a></li>
+<li><a href="#7-5-linker">7. Модуль 5. Парное сопоставление (LINKER)</a></li>
+<li><a href="#8-67">8. Модуль 6–7. Очистка потока и индикаторы</a></li>
+<li><a href="#9-8">9. Модуль 8. Расчёт лимита</a></li>
+<li><a href="#10">10. Выходные артефакты</a></li>
+<li><a href="#11-api">11. API и интерфейс</a></li>
+<li><a href="#12_1">12. Синтетические данные</a></li>
+<li><a href="#13-">13. Тест-план</a></li>
+<li><a href="#14_1">14. Развёртывание</a></li>
+<li><a href="#15-v2">15. Бэклог v2</a></li>
+<li><a href="#16">16. Риски прототипа</a></li>
+<li><a href="#_1">Приложение А. Отклонения реализации от исходного ТЗ</a></li>
+</ul>
+</div>
+</div>
+<h2 id="1">1. Контекст и назначение</h2>
+<h3 id="11">1.1 Проблема</h3>
+<p>Кредитование малого бизнеса на пополнение оборотных средств упирается в качество входных данных. Официальная отчётность (баланс, ОПиУ) для микро- и малого сегмента запаздывает на 3–12 месяцев, часто ведётся формально, а у ИП на УСН и патенте её попросту нет в пригодном для анализа виде. При этом фактическая экономика бизнеса полностью видна в движении по расчётному счёту.</p>
+<p>Банки решают это транзакционным скорингом по собственным оборотам клиента. Но у подхода есть слепая зона: банк видит только свой счёт. Клиент с оборотом 40 млн ₽ в месяц, из которых через данный банк проходит 6 млн ₽, получает лимит по «своим» 6 млн и уходит к конкуренту. Карточка счёта 51 из 1С закрывает эту зону — она содержит движение по <strong>всем</strong> расчётным счетам клиента во всех банках, уже размеченное корреспондирующими счетами бухучёта.</p>
+<h3 id="12">1.2 Что делает прототип</h3>
+<p>Принимает выгрузку карточки счёта 51 из 1С, разбирает её в структурированный поток операций, отделяет реальную операционную выручку от транзита, внутригрупповых переводов, заёмных денег и возвратов, считает набор риск-индикаторов и выдаёт кредитному аналитику обоснованный лимит с полной трассируемостью каждой цифры до конкретных строк исходного файла.</p>
+<h3 id="13">1.3 Чем прототип не является</h3>
+<ul>
+<li>Не является заменой кредитной политики и не принимает окончательного решения о выдаче.</li>
+<li>Не строит статистическую PD-модель (нет обучающей выборки дефолтов). Модель прототипа — экспертная, на правилах, с явными калибруемыми параметрами.</li>
+<li>Не проверяет контрагентов по внешним источникам (ЕГРЮЛ, ФНС, картотека арбитражных дел) — только по содержимому карточки. Внешние обогащения вынесены в бэклог v2.</li>
+<li>Не является средством ПОД/ФТ-контроля. Индикаторы, взятые из методических рекомендаций Банка России, используются как <strong>кредитные</strong> риск-факторы, а не как основание для отказа в обслуживании.</li>
+</ul>
+<h3 id="14">1.4 Регуляторный контур</h3>
+<p>Прототип адресует сегмент ссуд, которые в банке группируются в портфели однородных ссуд по Положению Банка России № 590-П: индивидуально незначительные ссуды субъектам МСП, оценка финансового положения по внутренней методике без официальной отчётности. Индикаторы транзитности и обналичивания опираются на Методические рекомендации Банка России № 18-МР от 21.07.2017 и письмо 236-Т.</p>
+<p><strong>Требование:</strong> каждое решение прототипа фиксируется в журнале в форме, пригодной для последующей валидации моделью-независимым подразделением: входные данные, версия правил, промежуточные метрики, применённые флаги, итог.</p>
+<hr />
+<h2 id="2">2. Цели и метрики</h2>
+<h3 id="21">2.1 Продуктовые цели</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Цель</th>
+<th>Метрика</th>
+<th>Целевое значение MVP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ц1</td>
+<td>Автоматизировать разбор карточки</td>
+<td>Доля суммы оборота, классифицированной правилами без ручного разбора (<code>auto_classified_share</code>)</td>
+<td>≥ 95 %</td>
+</tr>
+<tr>
+<td>Ц2</td>
+<td>Сократить время анализа</td>
+<td>Время от загрузки файла до отчёта (<code>analysis_time_sec</code>), карточка на 12 мес / ~5 000 операций</td>
+<td>≤ 20 с</td>
+</tr>
+<tr>
+<td>Ц3</td>
+<td>Дать прозрачное решение</td>
+<td>Доля цифр отчёта, раскрываемых до операций-источников</td>
+<td>100 %</td>
+</tr>
+<tr>
+<td>Ц4</td>
+<td>Отделить поток от шума</td>
+<td>Доля кейсов, где очищенная выручка отличается от валового кредитового оборота более чем на 5 %</td>
+<td>справочно, ожидается ≥ 70 %</td>
+</tr>
+<tr>
+<td>Ц5</td>
+<td>Развести автомат и человека</td>
+<td>Доля кейсов, ушедших в <code>MANUAL_REVIEW</code> (<code>straight_through_rate</code> = 1 − доля)</td>
+<td>STR ≥ 60 % на синтетическом наборе</td>
+</tr>
+</tbody>
+</table>
+<h3 id="22">2.2 Технические цели</h3>
+<ul>
+<li>Детерминированность: один и тот же файл + одна и та же версия правил дают побитово идентичный результат.</li>
+<li>Устойчивость к вариативности выгрузок 1С: парсер не падает на смещённой шапке, объединённых ячейках, многострочных операциях.</li>
+<li>Развёртывание одной командой на сервере, перезапуск переживает ребут.</li>
+</ul>
+<hr />
+<h2 id="3-mvp">3. Границы MVP</h2>
+<h3 id="31">3.1 В скоупе</h3>
+<ul>
+<li>Формат входа: <strong>карточка счёта 51 из 1С 8.3, выгрузка в <code>.xlsx</code> / <code>.xls</code></strong>.</li>
+<li>Период анализа: 6–24 месяца, рекомендуемый 12.</li>
+<li>Валюта: рубли. Мультивалютные операции (счёт 52) — детектируются и отбраковываются с предупреждением.</li>
+<li>Один юридический субъект (ИНН) на анализ, произвольное число расчётных счетов внутри карточки.</li>
+<li>Выход: JSON, HTML-отчёт, выгрузка в Excel.</li>
+<li>Веб-интерфейс: загрузка файла, просмотр отчёта, скачивание.</li>
+</ul>
+<h3 id="32-mvp-v2">3.2 Вне скоупа MVP (бэклог v2)</h3>
+<table>
+<thead>
+<tr>
+<th>Пункт</th>
+<th>Причина выноса</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Формат <code>1CClientBankExchange</code> (txt, cp1251)</td>
+<td>Второй по приоритету источник; архитектура ридеров плагинная, добавляется без переделки ядра</td>
+</tr>
+<tr>
+<td>CSV/Excel-выписки банков с мастером маппинга колонок</td>
+<td>Требует UI-мастера</td>
+</tr>
+<tr>
+<td>PDF-выписки (текстовый слой и OCR)</td>
+<td>Наибольшая трудоёмкость при наименьшей отдаче на прототипе</td>
+</tr>
+<tr>
+<td>Обогащение по ИНН из ЕГРЮЛ/ГИР БО/картотеки арбитража</td>
+<td>Внешние интеграции, ключи доступа</td>
+</tr>
+<tr>
+<td>ML-классификация назначений платежа</td>
+<td>Нет размеченной выборки; правила дают лучший результат на малых данных и объяснимы</td>
+</tr>
+<tr>
+<td>Скоринг PD и расчёт резерва</td>
+<td>Нет истории дефолтов</td>
+</tr>
+<tr>
+<td>Мультивалютный анализ (счёт 52)</td>
+<td>Требует курсовой переоценки</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4">4. Архитектура</h2>
+<h3 id="41">4.1 Конвейер</h3>
+<pre><code>[.xlsx карточка 51]
+        │
+        ▼
+  1. READER          определение формата, чтение листа, поиск шапки
+        │
+        ▼
+  2. NORMALIZER      склейка многострочных операций → плоский поток Transaction
+        │
+        ▼
+  3. VALIDATOR       контроль целостности: сальдо, полнота периода, дубли
+        │
+        ▼
+  4. CLASSIFIER      корсчёт (первичный) + regex назначения (вторичный) → категория
+        │
+        ▼
+  5. LINKER          парное сопоставление: транзит, эквайринг, возвраты, внутренние переводы
+        │
+        ▼
+  6. CLEANER         очищенный приток / операционный отток / свободный поток по месяцам
+        │
+        ▼
+  7. INDICATORS      15 риск-индикаторов, светофоры
+        │
+        ▼
+  8. LIMIT ENGINE    четыре ограничителя → min → множители флагов → стоп-факторы
+        │
+        ▼
+  9. REPORTER        JSON + HTML + XLSX, полная трассировка
+</code></pre>
+<p>Каждый шаг — самостоятельный модуль с чистой функцией <code>run(input) -&gt; output</code> и без побочных эффектов. Состояние между шагами передаётся типизированными объектами Pydantic.</p>
+<h3 id="42">4.2 Стек</h3>
+<table>
+<thead>
+<tr>
+<th>Слой</th>
+<th>Технология</th>
+<th>Обоснование</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Язык</td>
+<td>Python 3.11</td>
+<td>Экосистема разбора Excel и табличных данных</td>
+</tr>
+<tr>
+<td>Веб</td>
+<td>FastAPI + Uvicorn</td>
+<td>Автогенерация OpenAPI, типизация на pydantic</td>
+</tr>
+<tr>
+<td>Данные</td>
+<td>pandas, openpyxl, xlrd</td>
+<td>Чтение <code>.xlsx</code> и легаси <code>.xls</code></td>
+</tr>
+<tr>
+<td>Шаблоны</td>
+<td>Jinja2</td>
+<td>HTML-отчёт без фронтенд-сборки</td>
+</tr>
+<tr>
+<td>Модели</td>
+<td>Pydantic v2</td>
+<td>Валидация и сериализация конвейера</td>
+</tr>
+<tr>
+<td>Тесты</td>
+<td>pytest</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Пакетирование</td>
+<td>uv</td>
+<td>Локальная сборка окружения; системный Python 3.9 непригоден</td>
+</tr>
+<tr>
+<td>Контейнер</td>
+<td>Docker + Compose</td>
+<td>Требование заказчика</td>
+</tr>
+</tbody>
+</table>
+<p>Внешние сетевые вызовы в рантайме запрещены. Прототип обрабатывает файлы, содержащие коммерческую тайну клиента, и должен работать в изолированном контуре.</p>
+<h3 id="43">4.3 Структура проекта</h3>
+<pre><code>potok51/
+├── pyproject.toml
+├── README.md
+├── potok51/
+│   ├── models.py            # Transaction, Analysis, Indicator, LimitResult
+│   ├── config.py            # калибруемые параметры модели (единая точка правды)
+│   ├── readers/
+│   │   ├── base.py          # интерфейс Reader
+│   │   └── card51_xlsx.py   # карточка счёта 51, 1С 8.3
+│   ├── normalize.py
+│   ├── validate.py
+│   ├── rules/
+│   │   ├── accounts.py      # карта корреспондирующих счетов
+│   │   └── patterns.py      # regex-словари назначений платежа
+│   ├── classify.py
+│   ├── link.py              # транзит, эквайринг, возвраты, внутренние
+│   ├── clean.py
+│   ├── indicators.py
+│   ├── limit.py
+│   ├── report/
+│   │   ├── html.py
+│   │   ├── excel.py
+│   │   └── templates/report.html.j2
+│   ├── api.py               # FastAPI
+│   └── cli.py               # разбор из командной строки
+├── synth/
+│   └── generate.py          # генератор синтетических карточек
+├── tests/
+└── deploy/
+    ├── Dockerfile
+    ├── docker-compose.yml
+    ├── potok51.service
+    └── RUNBOOK.md
+</code></pre>
+<hr />
+<h2 id="5-12-51">5. Модуль 1–2. Чтение и нормализация карточки счёта 51</h2>
+<h3 id="51">5.1 Что представляет собой входной файл</h3>
+<p>Карточка счёта 51 — регистр бухгалтерского учёта, выгружаемый из 1С командой «Отчёты → Карточка счёта → 51». Ключевое отличие от банковской выписки: <strong>у каждой операции уже проставлен корреспондирующий счёт</strong>, то есть бухгалтер клиента уже выполнил экономическую квалификацию платежа. Это бесплатная разметка, которой в выписке нет.</p>
+<p>Типовая раскладка выгрузки 1С 8.3:</p>
+<table>
+<thead>
+<tr>
+<th>Период</th>
+<th>Документ</th>
+<th>Аналитика Дт / Аналитика Кт</th>
+<th>Дебет (Счёт / Сумма)</th>
+<th>Кредит (Счёт / Сумма)</th>
+<th>Текущее сальдо</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Для счёта 51: <strong>дебет = поступление на счёт</strong>, <strong>кредит = списание со счёта</strong>.</p>
+<h3 id="52">5.2 Практические проблемы выгрузок (обязательны к обработке)</h3>
+<table>
+<thead>
+<tr>
+<th>№</th>
+<th>Проблема</th>
+<th>Требуемое поведение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P1</td>
+<td>Шапка не в первой строке (сверху название организации, период, подписи)</td>
+<td>Автопоиск строки заголовка по совпадению ключевых слов: <code>Период</code>, <code>Документ</code>, <code>Дебет</code>, <code>Кредит</code>, <code>Сальдо</code></td>
+</tr>
+<tr>
+<td>P2</td>
+<td>Одна операция занимает 2–4 строки (дата+документ / контрагент+договор / содержание проводки)</td>
+<td>Группировка: новая операция начинается со строки с распознанной датой в колонке «Период»</td>
+</tr>
+<tr>
+<td>P3</td>
+<td>Объединённые ячейки</td>
+<td>Прямое чтение через openpyxl с разворачиванием merged-диапазонов; forward-fill значений</td>
+</tr>
+<tr>
+<td>P4</td>
+<td>Суммы как текст с неразрывным пробелом-разделителем и запятой</td>
+<td>Нормализация: удаление <code>\xa0</code>, пробелов, замена <code>,</code> на <code>.</code></td>
+</tr>
+<tr>
+<td>P5</td>
+<td>Даты строками в разных форматах (<code>05.03.2026</code>, <code>05.03.2026 12:04:07</code>)</td>
+<td>Мультиформатный парсер, отбраковка нераспознанных с логированием</td>
+</tr>
+<tr>
+<td>P6</td>
+<td>Строки итогов и оборотов вперемешку с проводками</td>
+<td>Отбраковка строк, где в «Периоде» стоят <code>Обороты за период</code>, <code>Сальдо на начало</code>, <code>Сальдо на конец</code>, <code>Итого</code> — но их значения <strong>сохраняются</strong> для контроля целостности</td>
+</tr>
+<tr>
+<td>P7</td>
+<td>Несколько расчётных счетов в одной карточке</td>
+<td>Извлечение номера счёта и банка из строк-разделителей субконто; проставляется в каждую операцию</td>
+</tr>
+<tr>
+<td>P8</td>
+<td>Корсчёт с субсчётом (<code>62.01</code>, <code>68.90</code>)</td>
+<td>Хранится полностью; классификация по первым двум знакам с уточнением по субсчёту</td>
+</tr>
+</tbody>
+</table>
+<h3 id="53">5.3 Модель операции</h3>
+<pre><code class="language-python">class Transaction(BaseModel):
+    row_no: int                  # номер строки в исходном файле — основа трассируемости
+    date: date
+    doc_type: str | None         # &quot;Списание с расчетного счета&quot;, &quot;Поступление на расчетный счет&quot;
+    doc_no: str | None
+    account_no: str | None       # расчётный счёт клиента
+    bank_name: str | None
+    corr_account: str | None     # &quot;62.01&quot;
+    counterparty: str | None
+    contract: str | None
+    purpose: str | None          # назначение платежа / содержание проводки
+    inflow: Decimal              # дебет счёта 51, поступление
+    outflow: Decimal             # кредит счёта 51, списание
+    balance_after: Decimal | None
+    # заполняется далее по конвейеру
+    category: Category | None
+    category_source: str | None  # &quot;corr_account&quot; | &quot;pattern:&lt;name&gt;&quot; | &quot;manual&quot;
+    link_id: str | None          # идентификатор пары при сопоставлении
+    excluded_reason: str | None
+</code></pre>
+<h3 id="54-validator">5.4 Контроль целостности (модуль VALIDATOR)</h3>
+<p>Проверки, выполняемые до анализа. При провале критической проверки анализ не выполняется, выдаётся отчёт о качестве данных.</p>
+<table>
+<thead>
+<tr>
+<th>Код</th>
+<th>Проверка</th>
+<th>Тип</th>
+<th>Действие при провале</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>V1</td>
+<td><code>сальдо_нач + Σдебет − Σкредит = сальдо_кон</code> (допуск 1 ₽)</td>
+<td>критическая</td>
+<td>Отказ в анализе: карточка неполная или искажена</td>
+</tr>
+<tr>
+<td>V2</td>
+<td>Итоги оборотов из файла совпадают с суммой разобранных операций</td>
+<td>критическая</td>
+<td>Отказ: парсер потерял операции</td>
+</tr>
+<tr>
+<td>V3</td>
+<td>Глубина периода ≥ 6 полных месяцев</td>
+<td>критическая</td>
+<td>Отказ: недостаточная история</td>
+</tr>
+<tr>
+<td>V4</td>
+<td>Отсутствие пропусков ≥ 21 календарного дня подряд без операций</td>
+<td>предупреждение</td>
+<td>Флаг качества данных</td>
+</tr>
+<tr>
+<td>V5</td>
+<td>Доля операций с нераспознанной датой</td>
+<td>критическая при &gt; 1 %</td>
+<td>Отказ</td>
+</tr>
+<tr>
+<td>V6</td>
+<td>Доля суммы оборота без корсчёта и без назначения</td>
+<td>предупреждение при &gt; 5 %</td>
+<td>Флаг, снижение доверия</td>
+</tr>
+<tr>
+<td>V7</td>
+<td>Наличие операций в валюте (счёт 52)</td>
+<td>предупреждение</td>
+<td>Исключение из расчёта, флаг</td>
+</tr>
+<tr>
+<td>V8</td>
+<td>Дубли операций (полное совпадение дата+сумма+контрагент+назначение)</td>
+<td>предупреждение</td>
+<td>Дедупликация с логированием</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-4">6. Модуль 4. Классификация операций</h2>
+<h3 id="61">6.1 Двухуровневая логика</h3>
+<p><strong>Уровень 1 — корреспондирующий счёт.</strong> Даёт категорию для 80–90 % оборота с высокой достоверностью.</p>
+<table>
+<thead>
+<tr>
+<th>Корсчёт</th>
+<th>Смысл</th>
+<th>Категория (приток / отток)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>62</td>
+<td>Расчёты с покупателями</td>
+<td><code>REVENUE_OPERATING</code> / <code>REVENUE_RETURN</code></td>
+</tr>
+<tr>
+<td>90</td>
+<td>Выручка (прямая проводка)</td>
+<td><code>REVENUE_OPERATING</code></td>
+</tr>
+<tr>
+<td>60</td>
+<td>Расчёты с поставщиками</td>
+<td><code>SUPPLIER_REFUND</code> / <code>OPEX_SUPPLIERS</code></td>
+</tr>
+<tr>
+<td>68</td>
+<td>Налоги, включая ЕНС (68.90)</td>
+<td>— / <code>OPEX_TAXES</code></td>
+</tr>
+<tr>
+<td>69</td>
+<td>Страховые взносы</td>
+<td>— / <code>OPEX_PAYROLL_TAX</code></td>
+</tr>
+<tr>
+<td>70</td>
+<td>Расчёты с персоналом по оплате труда</td>
+<td>— / <code>OPEX_PAYROLL</code></td>
+</tr>
+<tr>
+<td>71</td>
+<td>Подотчётные лица</td>
+<td>— / <code>CASH_PROXY</code></td>
+</tr>
+<tr>
+<td>73</td>
+<td>Расчёты с персоналом по прочим операциям</td>
+<td><code>LOAN_REPAY_IN</code> / <code>LOAN_ISSUE_OUT</code></td>
+</tr>
+<tr>
+<td>75</td>
+<td>Расчёты с учредителями</td>
+<td><code>OWNER_CONTRIBUTION</code> / <code>OWNER_WITHDRAWAL</code></td>
+</tr>
+<tr>
+<td>66</td>
+<td>Краткосрочные кредиты и займы</td>
+<td><code>FIN_LOAN_IN</code> / <code>FIN_LOAN_OUT</code></td>
+</tr>
+<tr>
+<td>67</td>
+<td>Долгосрочные кредиты и займы</td>
+<td><code>FIN_LOAN_IN</code> / <code>FIN_LOAN_OUT</code></td>
+</tr>
+<tr>
+<td>76</td>
+<td>Прочие дебиторы и кредиторы</td>
+<td>требует уровня 2</td>
+</tr>
+<tr>
+<td>51, 52, 55</td>
+<td>Другие счета организации</td>
+<td><code>INTERNAL_TRANSFER</code></td>
+</tr>
+<tr>
+<td>57</td>
+<td>Переводы в пути (эквайринг, инкассация)</td>
+<td><code>ACQUIRING_IN</code> / <code>ACQUIRING_OUT</code></td>
+</tr>
+<tr>
+<td>50</td>
+<td>Касса</td>
+<td><code>CASH_DEPOSIT</code> / <code>CASH_WITHDRAWAL</code></td>
+</tr>
+<tr>
+<td>58</td>
+<td>Финансовые вложения (депозиты, займы выданные)</td>
+<td><code>DEPOSIT_IN</code> / <code>DEPOSIT_OUT</code></td>
+</tr>
+<tr>
+<td>91</td>
+<td>Прочие доходы и расходы</td>
+<td><code>OTHER_INCOME</code> / <code>OPEX_BANK_FEES</code></td>
+</tr>
+<tr>
+<td>19, 10, 41, 08</td>
+<td>Прямые проводки на активы</td>
+<td><code>OPEX_SUPPLIERS</code> / <code>CAPEX</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Уровень 2 — regex по назначению платежа.</strong> Применяется, когда корсчёт отсутствует, равен 76 или когда паттерн уточняет категорию. Приоритет паттерна выше корсчёта для перечисленных ниже категорий, поскольку по счёту 76 через один субсчёт проходят экономически разные операции.</p>
+<h3 id="62-70">6.2 Словари паттернов (минимальный набор, ~70 правил)</h3>
+<table>
+<thead>
+<tr>
+<th>Категория</th>
+<th>Ключевые выражения (регистронезависимо, по нормализованному тексту)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>OPEX_TAXES</code></td>
+<td><code>налог</code>, <code>НДС</code>, <code>НДФЛ</code>, <code>ЕНС</code>, <code>единый налоговый</code>, <code>страховые взносы</code>, <code>пени</code>, <code>штраф</code> + получатель содержит <code>УФК</code>, <code>Казначейств</code>, <code>ИФНС</code>, <code>ФНС</code></td>
+</tr>
+<tr>
+<td><code>OPEX_PAYROLL</code></td>
+<td><code>заработн</code>, <code>зарплат</code>, <code>аванс за</code>, <code>по реестру №</code>, <code>выплата по реестру</code>, <code>отпускн</code>, <code>больничн</code>, <code>под расчёт</code></td>
+</tr>
+<tr>
+<td><code>OPEX_RENT</code></td>
+<td><code>аренд</code>, <code>субаренд</code>, <code>наем помещ</code>, <code>коммунальн</code>, <code>электроэнерг</code>, <code>водоснабж</code>, <code>теплоснабж</code></td>
+</tr>
+<tr>
+<td><code>OPEX_COMMS</code></td>
+<td><code>связ</code>, <code>интернет</code>, <code>телефон</code>, <code>хостинг</code></td>
+</tr>
+<tr>
+<td><code>OPEX_BANK_FEES</code></td>
+<td><code>комисси</code>, <code>за ведение счета</code>, <code>расчетно-кассов</code>, <code>РКО</code>, <code>за обслуживание</code></td>
+</tr>
+<tr>
+<td><code>ACQUIRING_IN</code></td>
+<td><code>эквайринг</code>, <code>возмещение по операциям</code>, <code>по операциям с использованием карт</code></td>
+</tr>
+<tr>
+<td><code>FIN_LOAN_IN</code></td>
+<td><code>выдача кредита</code>, <code>предоставление кредита</code>, <code>по кредитному договору</code>, <code>по договору займа</code> (приток)</td>
+</tr>
+<tr>
+<td><code>FIN_LOAN_OUT</code></td>
+<td><code>погашение кредита</code>, <code>гашение основного долга</code>, <code>возврат займа</code></td>
+</tr>
+<tr>
+<td><code>FIN_INTEREST</code></td>
+<td><code>проценты по кредит</code>, <code>уплата процентов</code>, <code>процентов по договору</code></td>
+</tr>
+<tr>
+<td><code>OWNER_WITHDRAWAL</code></td>
+<td><code>дивиденд</code>, <code>распределение прибыли</code>, <code>перевод собственных средств</code>, <code>предпринимательский доход</code>, <code>на личную карту</code>, <code>на счет ИП</code></td>
+</tr>
+<tr>
+<td><code>OWNER_CONTRIBUTION</code></td>
+<td><code>пополнение собственных средств</code>, <code>внесение средств учредителем</code>, <code>вклад в имущество</code></td>
+</tr>
+<tr>
+<td><code>CASH_WITHDRAWAL</code></td>
+<td><code>хозяйственные нужды</code>, <code>на закупку у населения</code>, <code>в подотчет</code>, <code>снятие наличных</code>, <code>по чеку</code></td>
+</tr>
+<tr>
+<td><code>RETURN</code></td>
+<td><code>возврат</code>, <code>ошибочно перечисл</code>, <code>возврат аванса</code>, <code>по письму</code></td>
+</tr>
+<tr>
+<td><code>ENFORCEMENT</code></td>
+<td><code>исполнительн</code>, <code>ФССП</code>, <code>инкассовое</code>, <code>по постановлению</code>, <code>судебн</code>, <code>требование №</code></td>
+</tr>
+<tr>
+<td><code>LEASING</code></td>
+<td><code>лизинг</code>, <code>лизингов</code></td>
+</tr>
+<tr>
+<td><code>FACTORING</code></td>
+<td><code>факторинг</code>, <code>уступк</code>, <code>финансирование под уступку</code></td>
+</tr>
+<tr>
+<td><code>INTERNAL_TRANSFER</code></td>
+<td>ИНН получателя = ИНН клиента; <code>перевод между счетами</code>, <code>пополнение счета</code>, <code>на другой счет</code></td>
+</tr>
+<tr>
+<td><code>INSURANCE</code></td>
+<td><code>страхов</code>, <code>полис</code>, <code>ОСАГО</code>, <code>КАСКО</code></td>
+</tr>
+<tr>
+<td><code>CUSTOMS</code></td>
+<td><code>таможен</code>, <code>ФТС</code>, <code>авансовые платежи по ДТ</code></td>
+</tr>
+</tbody>
+</table>
+<p>Каждый паттерн в коде имеет поля: <code>name</code>, <code>regex</code>, <code>category</code>, <code>direction</code> (<code>in</code>/<code>out</code>/<code>any</code>), <code>priority</code>, <code>note</code>. Справочник вынесен в отдельный модуль и покрыт тестами — он основной объект последующей калибровки.</p>
+<h3 id="63">6.3 Обработка неклассифицированного</h3>
+<p>Операции, не покрытые ни корсчётом, ни паттернами, попадают в <code>UNCLASSIFIED</code>. Их сумма измеряется и выводится в отчёт отдельным блоком с топ-20 крупнейших. Если <code>UNCLASSIFIED</code> превышает 15 % оборота — кейс уходит в <code>MANUAL_REVIEW</code> независимо от прочих факторов, и в отчёте показывается лист ручной доразметки.</p>
+<hr />
+<h2 id="7-5-linker">7. Модуль 5. Парное сопоставление (LINKER)</h2>
+<p>Модуль решает четыре задачи, каждая — с сохранением идентификатора пары для трассируемости.</p>
+<h3 id="71">7.1 Внутренние переводы между собственными счетами</h3>
+<p>Признак: в один-два дня по одной карточке есть списание и поступление на равную сумму по разным <code>account_no</code> при корсчёте 51/52/55 или ИНН контрагента = ИНН клиента. Обе стороны исключаются из оборота — иначе один и тот же рубль считается выручкой дважды.</p>
+<h3 id="72">7.2 Эквайринг</h3>
+<p>Поступления <code>ACQUIRING_IN</code> (корсчёт 57) — реальная розничная выручка и <strong>включаются</strong> в очищенный приток. Одновременно проверяется, нет ли по тем же суммам параллельных проводок по 62 — при обнаружении дубля включается одна сторона, вторая помечается <code>excluded_reason="acquiring_duplicate"</code>.</p>
+<h3 id="73">7.3 Возвраты</h3>
+<p>Возврат покупателю (отток по 62) вычитается из выручки того месяца, в котором он произошёл. Возврат от поставщика (приток по 60) не является выручкой и исключается из притока.</p>
+<h3 id="74">7.4 Детектор транзита</h3>
+<p>Двойной механизм — это принципиально, потому что транзит должен и вычищаться из расчёта, и одновременно поднимать флаг.</p>
+<p><strong>А. Парное сопоставление (даёт конкретные операции для отчёта).</strong>
+Жадный алгоритм FIFO: для каждого поступления ищется одно или несколько списаний в окне <code>TRANSIT_WINDOW_DAYS = 3</code> календарных дня, в сумме покрывающих от 90 до 110 % поступления, при условии, что списание не относится к операционным категориям (не налоги, не ФОТ, не аренда, не комиссии). Совпавшие пары получают общий <code>link_id</code> и помечаются <code>TRANSIT_SUSPECT</code>.</p>
+<p><strong>Б. Агрегатные индикаторы 18-МР</strong> (раздел 8, индикаторы T1–T5).</p>
+<p><code>transit_ratio</code> = сумма поступлений, попавших в транзитные пары / общий приток.</p>
+<p>Транзитные поступления исключаются из очищенного притока полностью.</p>
+<hr />
+<h2 id="8-67">8. Модуль 6–7. Очистка потока и индикаторы</h2>
+<h3 id="81">8.1 Формирование очищенного потока</h3>
+<pre><code>Валовой приток (Σ дебет 51)
+  − INTERNAL_TRANSFER
+  − FIN_LOAN_IN            (получение кредитов и займов — это долг, не выручка)
+  − OWNER_CONTRIBUTION     (вклады собственника)
+  − DEPOSIT_IN             (возврат депозитов)
+  − SUPPLIER_REFUND        (возвраты от поставщиков)
+  − TRANSIT_SUSPECT        (транзит)
+  − ACQUIRING_DUPLICATE
+  − ошибочные зачисления с возвратом (парные)
+  − CASH_DEPOSIT           (внесение наличных — выручка уже учтена либо это не выручка)
+  = КВАЛИФИЦИРОВАННЫЙ ПРИТОК (qualified_inflow)
+  − REVENUE_RETURN         (возвраты покупателям)
+  = ОЧИЩЕННАЯ ВЫРУЧКА (adjusted_revenue)
+
+Операционный отток =
+    OPEX_SUPPLIERS + OPEX_PAYROLL + OPEX_PAYROLL_TAX + OPEX_TAXES
+  + OPEX_RENT + OPEX_COMMS + OPEX_BANK_FEES + INSURANCE + CUSTOMS + LEASING
+
+СВОБОДНЫЙ ОПЕРАЦИОННЫЙ ПОТОК (FCF) = Очищенная выручка − Операционный отток
+</code></pre>
+<p>Все три величины считаются <strong>помесячно</strong>, а не одной суммой за период. Помесячный ряд — основа для оценки волатильности, тренда и худшего месяца.</p>
+<h3 id="82">8.2 Справочник индикаторов</h3>
+<p>Порог «жёлтый / красный» задаётся в <code>config.py</code> и является объектом калибровки.</p>
+<table>
+<thead>
+<tr>
+<th>Код</th>
+<th>Индикатор</th>
+<th>Формула</th>
+<th>Жёлтый</th>
+<th>Красный</th>
+<th>Источник логики</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T1</td>
+<td>Налоговая нагрузка</td>
+<td>(OPEX_TAXES + OPEX_PAYROLL_TAX) / валовой дебетовый оборот</td>
+<td>0,9–2 %</td>
+<td>&lt; 0,9 %</td>
+<td>18-МР</td>
+</tr>
+<tr>
+<td>T2</td>
+<td>Реальность ФОТ</td>
+<td>наличие OPEX_PAYROLL и НДФЛ в ≥ 80 % месяцев</td>
+<td>50–80 % месяцев</td>
+<td>&lt; 50 % при выручке &gt; 5 млн ₽/мес</td>
+<td>18-МР</td>
+</tr>
+<tr>
+<td>T3</td>
+<td>Транзитность</td>
+<td><code>transit_ratio</code></td>
+<td>15–40 %</td>
+<td>&gt; 40 %</td>
+<td>18-МР, 236-Т</td>
+</tr>
+<tr>
+<td>T4</td>
+<td>Обналичивание</td>
+<td>(CASH_WITHDRAWAL + CASH_PROXY + переводы физлицам) / дебетовый оборот</td>
+<td>10–30 %</td>
+<td>&gt; 30 %</td>
+<td>18-МР</td>
+</tr>
+<tr>
+<td>T5</td>
+<td>Накопление остатка</td>
+<td>средний дневной остаток / среднемесячный приток</td>
+<td>2–5 %</td>
+<td>&lt; 2 %</td>
+<td>18-МР</td>
+</tr>
+<tr>
+<td>T6</td>
+<td>Признаки хозяйственной деятельности</td>
+<td>наличие аренды/связи/хознужд в ≥ 6 месяцах</td>
+<td>3–6 месяцев</td>
+<td>&lt; 3 месяцев</td>
+<td>18-МР</td>
+</tr>
+<tr>
+<td>T7</td>
+<td>Концентрация покупателей</td>
+<td>доля топ-1 контрагента в очищенной выручке; HHI</td>
+<td>топ-1 40–60 %</td>
+<td>топ-1 &gt; 60 %</td>
+<td>кредитная практика</td>
+</tr>
+<tr>
+<td>T8</td>
+<td>Волатильность выручки</td>
+<td>коэффициент вариации помесячной очищенной выручки</td>
+<td>0,35–0,60</td>
+<td>&gt; 0,60</td>
+<td>кредитная практика</td>
+</tr>
+<tr>
+<td>T9</td>
+<td>Тренд выручки</td>
+<td>(среднее за посл. 3 мес) / (среднее за предыдущие 3 мес) − 1</td>
+<td>−15 %…−30 %</td>
+<td>&lt; −30 %</td>
+<td>кредитная практика</td>
+</tr>
+<tr>
+<td>T10</td>
+<td>Долговая нагрузка</td>
+<td>(FIN_LOAN_OUT + FIN_INTEREST) / очищенная выручка</td>
+<td>15–25 %</td>
+<td>&gt; 25 %</td>
+<td>кредитная практика</td>
+</tr>
+<tr>
+<td>T11</td>
+<td>Принудительное взыскание</td>
+<td>сумма ENFORCEMENT / дебетовый оборот</td>
+<td>&gt; 0 и ≤ 2 %</td>
+<td>&gt; 2 %</td>
+<td>картотека по счёту</td>
+</tr>
+<tr>
+<td>T12</td>
+<td>Маржинальность потока</td>
+<td>FCF / очищенная выручка</td>
+<td>0–5 %</td>
+<td>&lt; 0</td>
+<td>кредитная практика</td>
+</tr>
+<tr>
+<td>T13</td>
+<td>Вывод собственнику</td>
+<td>OWNER_WITHDRAWAL / очищенная выручка</td>
+<td>20–40 %</td>
+<td>&gt; 40 %</td>
+<td>кредитная практика</td>
+</tr>
+<tr>
+<td>T14</td>
+<td>Дни с нулевым остатком</td>
+<td>доля дней периода с остатком &lt; 1 % среднемесячного оттока</td>
+<td>10–25 %</td>
+<td>&gt; 25 %</td>
+<td>ликвидность</td>
+</tr>
+<tr>
+<td>T15</td>
+<td>Качество данных</td>
+<td>доля UNCLASSIFIED в обороте + результаты V4–V8</td>
+<td>5–15 %</td>
+<td>&gt; 15 %</td>
+<td>внутреннее</td>
+</tr>
+</tbody>
+</table>
+<p>Каждый индикатор возвращает объект: значение, статус (<code>GREEN</code>/<code>AMBER</code>/<code>RED</code>), человекочитаемое объяснение, и список <code>row_no</code> операций, из которых он посчитан.</p>
+<hr />
+<h2 id="9-8">9. Модуль 8. Расчёт лимита</h2>
+<h3 id="91">9.1 Принцип</h3>
+<p>Лимит — <strong>минимум из четырёх независимых ограничителей</strong>, каждый из которых отвечает на свой вопрос. Единая формула недопустима: она даёт правдоподобное число, которое нечем защищать перед андеррайтером.</p>
+<p><strong>L1 — ограничитель по масштабу выручки.</strong> Сколько банк готов дать бизнесу такого размера.</p>
+<pre><code>L1 = k_industry × ARM
+ARM = среднемесячная очищенная выручка за последние 6 месяцев
+k_industry: опт/дистрибуция 1,5 · розница 1,0 · услуги 1,2 · производство 1,5 · стройка 0,8 · транспорт 1,0
+</code></pre>
+<p>(множитель применяется к месячной выручке, то есть лимит в 1,0 означает лимит, равный одному месячному обороту)</p>
+<p><strong>L2 — ограничитель по обслуживанию долга.</strong> Сколько бизнес способен обслуживать.</p>
+<pre><code>допустимый месячный платёж = FCF_median / DSCR_target,  DSCR_target = 1,4
+FCF_median = медиана помесячного свободного потока за 12 мес (медиана, не среднее — устойчива к выбросам)
+L2 = допустимый месячный платёж × PV-аннуитета(ставка, срок)
+по умолчанию: ставка 24 % годовых, срок 24 месяца
+</code></pre>
+<p><strong>L3 — ограничитель по потребности в оборотном капитале.</strong> Сколько бизнесу реально нужно; лимит выше потребности — это не оборотка, а вывод денег.</p>
+<pre><code>L3 = средний дневной операционный отток × длительность операционного цикла (дней)
+длительность по умолчанию 45 дней, настраивается по отрасли
+</code></pre>
+<p><strong>L4 — потолок продукта.</strong> Ограничение сегмента, например 20 млн ₽ для беззалогового транша.</p>
+<pre><code>Лимит_базовый = min(L1, L2, L3, L4)
+</code></pre>
+<h3 id="92">9.2 Понижающие множители</h3>
+<pre><code>Лимит = Лимит_базовый × Π(множители индикаторов)
+множитель: GREEN → 1,00 · AMBER → 0,90 · RED → 0,70
+пол произведения: 0,40
+округление вниз до 100 000 ₽
+</code></pre>
+<h3 id="93-0-decline">9.3 Стоп-факторы (лимит = 0, решение <code>DECLINE</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>Код</th>
+<th>Условие</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S1</td>
+<td><code>transit_ratio</code> &gt; 60 %</td>
+</tr>
+<tr>
+<td>S2</td>
+<td>Налоговая нагрузка &lt; 0,3 % при валовом обороте &gt; 10 млн ₽ за период</td>
+</tr>
+<tr>
+<td>S3</td>
+<td>Сумма по исполнительным документам &gt; 5 % дебетового оборота</td>
+</tr>
+<tr>
+<td>S4</td>
+<td>Свободный операционный поток отрицателен в ≥ 4 из последних 6 месяцев</td>
+</tr>
+<tr>
+<td>S5</td>
+<td>Очищенная выручка за последние 3 месяца &lt; 300 000 ₽/мес</td>
+</tr>
+<tr>
+<td>S6</td>
+<td>Провал критической проверки целостности (V1, V2, V3, V5)</td>
+</tr>
+<tr>
+<td>S7</td>
+<td>Падение выручки более чем на 50 % за последние 3 месяца к предыдущим 3</td>
+</tr>
+</tbody>
+</table>
+<h3 id="94">9.4 Решение</h3>
+<table>
+<thead>
+<tr>
+<th>Решение</th>
+<th>Условие</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DECLINE</code></td>
+<td>сработал любой стоп-фактор</td>
+</tr>
+<tr>
+<td><code>MANUAL_REVIEW</code></td>
+<td>≥ 1 красный индикатор (не стоп) <strong>или</strong> T15 в красной зоне <strong>или</strong> UNCLASSIFIED &gt; 15 % оборота</td>
+</tr>
+<tr>
+<td><code>AUTO_APPROVE</code></td>
+<td>нет красных индикаторов, лимит &gt; 0</td>
+</tr>
+</tbody>
+</table>
+<p>Вывод всегда содержит <strong>диапазон</strong> <code>[Лимит × 0,8; Лимит]</code>, а не одну точку, и явный список причин, по которым лимит именно такой.</p>
+<hr />
+<h2 id="10">10. Выходные артефакты</h2>
+<h3 id="101-json">10.1 JSON (машинный контракт)</h3>
+<pre><code class="language-json">{
+  &quot;analysis_id&quot;: &quot;uuid&quot;,
+  &quot;rules_version&quot;: &quot;1.0.0&quot;,
+  &quot;created_at&quot;: &quot;ISO-8601&quot;,
+  &quot;source&quot;: {&quot;filename&quot;: &quot;...&quot;, &quot;sha256&quot;: &quot;...&quot;, &quot;rows&quot;: 5123},
+  &quot;period&quot;: {&quot;from&quot;: &quot;2025-08-01&quot;, &quot;to&quot;: &quot;2026-07-31&quot;, &quot;months&quot;: 12},
+  &quot;accounts&quot;: [{&quot;account_no&quot;: &quot;...&quot;, &quot;bank&quot;: &quot;...&quot;}],
+  &quot;data_quality&quot;: {&quot;checks&quot;: [...], &quot;passed&quot;: true},
+  &quot;volumes&quot;: {
+    &quot;gross_inflow&quot;: 0, &quot;gross_outflow&quot;: 0,
+    &quot;qualified_inflow&quot;: 0, &quot;adjusted_revenue&quot;: 0,
+    &quot;operating_outflow&quot;: 0, &quot;fcf&quot;: 0,
+    &quot;exclusions&quot;: [{&quot;category&quot;: &quot;...&quot;, &quot;amount&quot;: 0, &quot;share&quot;: 0.0, &quot;rows&quot;: [1,2]}]
+  },
+  &quot;monthly&quot;: [{&quot;month&quot;: &quot;2026-07&quot;, &quot;adjusted_revenue&quot;: 0, &quot;operating_outflow&quot;: 0, &quot;fcf&quot;: 0}],
+  &quot;indicators&quot;: [{&quot;code&quot;: &quot;T1&quot;, &quot;name&quot;: &quot;...&quot;, &quot;value&quot;: 0.0, &quot;status&quot;: &quot;GREEN&quot;,
+                  &quot;explanation&quot;: &quot;...&quot;, &quot;rows&quot;: [12, 44]}],
+  &quot;limit&quot;: {
+    &quot;constraints&quot;: {&quot;L1&quot;: 0, &quot;L2&quot;: 0, &quot;L3&quot;: 0, &quot;L4&quot;: 0},
+    &quot;binding_constraint&quot;: &quot;L2&quot;,
+    &quot;base&quot;: 0, &quot;multiplier&quot;: 0.9, &quot;final&quot;: 0, &quot;range&quot;: [0, 0]
+  },
+  &quot;decision&quot;: {&quot;code&quot;: &quot;MANUAL_REVIEW&quot;, &quot;stop_factors&quot;: [], &quot;reasons&quot;: [&quot;...&quot;]},
+  &quot;metrics&quot;: {&quot;auto_classified_share&quot;: 0.97, &quot;analysis_time_sec&quot;: 12.4}
+}
+</code></pre>
+<h3 id="102-html-">10.2 HTML-отчёт кредитного аналитика</h3>
+<p>Один самодостаточный файл без внешних зависимостей: открывается офлайн, пересылается, печатается в A4.</p>
+<p>Структура:
+1. <strong>Шапка решения</strong> — ИНН, период, решение крупно, лимит и диапазон, связывающий ограничитель.
+2. <strong>Плитки</strong> — очищенная выручка в месяц, свободный поток, транзитность, налоговая нагрузка.
+3. <strong>Панель светофоров</strong> — 15 индикаторов сеткой с цветом и значением.
+4. <strong>Мост от валового оборота к очищенной выручке</strong> — водопад: каждая ступень исключения кликабельна и разворачивает таблицу операций.
+5. <strong>Помесячная динамика</strong> — столбцы выручки и линия свободного потока, встроенный SVG.
+6. <strong>Расчёт лимита</strong> — четыре ограничителя с формулами и подставленными числами, видно, какой связывает.
+7. <strong>Топ контрагентов</strong> — по притоку и оттоку, с долями.
+8. <strong>Неклассифицированное</strong> — топ-20 операций для ручной доразметки.
+9. <strong>Приложение</strong> — журнал проверок целостности, версия правил, хеш файла.</p>
+<p>Требование трассируемости: <strong>любая</strong> цифра в отчёте раскрывается до списка операций с номерами строк исходного файла.</p>
+<h3 id="103-excel">10.3 Excel</h3>
+<p>Листы: <code>Решение</code>, <code>Операции</code> (полный размеченный поток), <code>Помесячно</code>, <code>Индикаторы</code>, <code>Исключения</code>, <code>Неклассифицированное</code>.</p>
+<hr />
+<h2 id="11-api">11. API и интерфейс</h2>
+<table>
+<thead>
+<tr>
+<th>Метод</th>
+<th>Путь</th>
+<th>Назначение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>/</code></td>
+<td>Форма загрузки файла</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/v1/analyze</code></td>
+<td>multipart: <code>file</code>, опционально <code>inn</code>, <code>industry</code>, <code>requested_amount</code> → <code>analysis_id</code></td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/v1/analysis/{id}</code></td>
+<td>JSON-результат</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/analysis/{id}</code></td>
+<td>HTML-отчёт</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/v1/analysis/{id}/export.xlsx</code></td>
+<td>Выгрузка Excel</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/v1/analysis/{id}/rows?category=...</code></td>
+<td>Операции по категории (для раскрытия)</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/healthz</code></td>
+<td>Проверка живости для systemd и Compose</td>
+</tr>
+</tbody>
+</table>
+<p>Ограничения: размер файла ≤ 50 МБ, тип <code>.xlsx</code>/<code>.xls</code>, синхронная обработка с таймаутом 120 с. Результаты хранятся в <code>/data/analyses/{id}/</code> (исходник, JSON, HTML, XLSX). Индекс — SQLite. Аутентификация в MVP — HTTP Basic на уровне приложения, включается переменной окружения.</p>
+<p>CLI-режим для пакетного прогона: <code>potok51 analyze card.xlsx --industry retail --out report.html</code>.</p>
+<hr />
+<h2 id="12_1">12. Синтетические данные</h2>
+<p>Генератор <code>synth/generate.py</code> создаёт карточки счёта 51 в формате выгрузки 1С со всеми практическими особенностями из раздела 5.2 (многострочность, объединённые ячейки, текстовые суммы, строки итогов).</p>
+<p>Обязательные профили:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Профиль</th>
+<th>Что проверяет</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Оптовая торговля, здоровая</td>
+<td>Базовый сценарий, <code>AUTO_APPROVE</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Розница с эквайрингом</td>
+<td>Корректность обработки счёта 57 без двойного счёта выручки</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Услуги (ИТ-аутсорс), высокая концентрация</td>
+<td>Срабатывание T7 при общем здоровом профиле</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Строительство, сезонность и разрывы</td>
+<td>T8, T14, поведение L3</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Грузоперевозки, ИП, регулярные выводы себе</td>
+<td>T13, отличие вывода ИП от дивидендов</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Транзитная схема</strong></td>
+<td>S1: приток и списание в 1–2 дня, налоги 0,4 %, ФОТ нет</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Обналичивание</strong></td>
+<td>T4 красный, снятия и подотчёт &gt; 35 %</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Схлопывание оборота</strong></td>
+<td>S7: падение выручки в 2,5 раза за последний квартал</td>
+</tr>
+</tbody>
+</table>
+<p>Генератор детерминирован при фиксированном seed.</p>
+<hr />
+<h2 id="13-">13. Тест-план</h2>
+<table>
+<thead>
+<tr>
+<th>Уровень</th>
+<th>Что проверяется</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Юнит: парсер</td>
+<td>Все восемь проблем P1–P8 на подготовленных фикстурах</td>
+</tr>
+<tr>
+<td>Юнит: классификатор</td>
+<td>Каждое правило справочника имеет минимум один положительный и один отрицательный кейс</td>
+</tr>
+<tr>
+<td>Юнит: линкер</td>
+<td>Транзитная пара находится; операционные платежи не попадают в транзит ложно</td>
+</tr>
+<tr>
+<td>Юнит: очистка</td>
+<td>Тождество: валовой приток − Σисключений = квалифицированный приток (до копейки)</td>
+</tr>
+<tr>
+<td>Юнит: лимит</td>
+<td>Каждый из L1–L4 становится связывающим на подобранном кейсе; каждый стоп-фактор срабатывает</td>
+</tr>
+<tr>
+<td>Интеграционный</td>
+<td>Все 8 синтетических профилей проходят конвейер и дают ожидаемое решение</td>
+</tr>
+<tr>
+<td>Регрессия</td>
+<td>Золотые снимки JSON по каждому профилю; изменение правил, меняющее результат, обязано менять снимок осознанно</td>
+</tr>
+<tr>
+<td>Целостность</td>
+<td><code>auto_classified_share ≥ 0,95</code> на всех профилях</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="14_1">14. Развёртывание</h2>
+<h3 id="141">14.1 Требования</h3>
+<p>Целевая среда — Linux-сервер заказчика. Развёртывание Docker Compose под управлением systemd.</p>
+<p>Учтены отказы предыдущей инфраструктуры заказчика, повторять которые запрещено:</p>
+<table>
+<thead>
+<tr>
+<th>Прошлая ошибка</th>
+<th>Требование в этом проекте</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Деплой ручным rsync мимо git</td>
+<td>Деплой только <code>git pull</code> в рабочем каталоге сервера</td>
+</tr>
+<tr>
+<td>Сервисы через <code>nohup</code>, умирали после ребута</td>
+<td>systemd-юнит с <code>Restart=always</code> и <code>WantedBy=multi-user.target</code></td>
+</tr>
+<tr>
+<td>Отсутствие venv, cron падал молча</td>
+<td>Всё внутри контейнера; healthcheck в Compose</td>
+</tr>
+<tr>
+<td>Нет swap, нет алертов</td>
+<td>В runbook — проверка swap и настройка healthcheck-эндпоинта</td>
+</tr>
+<tr>
+<td>Токен в <code>git remote</code> открытым текстом</td>
+<td>Только SSH-remote; <code>.env</code> в <code>.gitignore</code>, на сервере создаётся вручную из <code>.env.example</code></td>
+</tr>
+<tr>
+<td>Отсутствие ротации логов</td>
+<td><code>logging</code> драйвер Compose с <code>max-size</code> и <code>max-file</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="142-">14.2 Состав деплой-пакета</h3>
+<ul>
+<li><code>deploy/Dockerfile</code> — многостадийная сборка на <code>python:3.11-slim</code>, непривилегированный пользователь.</li>
+<li><code>deploy/docker-compose.yml</code> — сервис, том <code>/data</code>, healthcheck, ограничение памяти, ротация логов.</li>
+<li><code>deploy/potok51.service</code> — systemd-юнит, запускающий Compose.</li>
+<li><code>deploy/.env.example</code> — <code>POTOK51_PORT</code>, <code>POTOK51_BASIC_USER</code>, <code>POTOK51_BASIC_PASSWORD</code>, <code>POTOK51_DATA_DIR</code>.</li>
+<li><code>deploy/RUNBOOK.md</code> — установка, обновление, откат, диагностика, чек-лист приёмки.</li>
+</ul>
+<h3 id="143">14.3 Приёмка развёртывания</h3>
+<ol>
+<li><code>systemctl status potok51</code> — active (running).</li>
+<li><code>curl localhost:PORT/healthz</code> — 200.</li>
+<li>Загрузка синтетического профиля №1 через веб — отчёт получен.</li>
+<li><code>reboot</code>, повторная проверка пунктов 1–2 — сервис поднялся сам.</li>
+<li>Логи ротируются, <code>/data</code> переживает пересоздание контейнера.</li>
+</ol>
+<hr />
+<h2 id="15-v2">15. Бэклог v2</h2>
+<ol>
+<li>Ридер <code>1CClientBankExchange</code> (txt, cp1251) — даёт ИНН контрагента напрямую, повышает точность классификации и детекцию внутригрупповых.</li>
+<li>Мастер импорта произвольных CSV/Excel-выписок.</li>
+<li>Обогащение по ИНН: ЕГРЮЛ, ГИР БО, арбитраж, реестр МСП, дисквалификация руководителя.</li>
+<li>Определение связанных сторон и внутригрупповых оборотов по совпадению учредителей.</li>
+<li>Разметка неклассифицированного человеком с накоплением обучающей выборки; ML-классификатор как второй контур после накопления ≥ 50 тыс. размеченных операций.</li>
+<li>Сверка карточки 51 с оборотами по счёту клиента в банке — детекция расхождений как отдельный флаг.</li>
+<li>Калибровка порогов и коэффициентов на исторических дефолтах, расчёт разделительной способности (Gini/AUC).</li>
+<li>Интеграция в кредитный конвейер: очередь заявок, роли, статусы, выгрузка решения в АБС.</li>
+</ol>
+<hr />
+<h2 id="16">16. Риски прототипа</h2>
+<table>
+<thead>
+<tr>
+<th>Риск</th>
+<th>Проявление</th>
+<th>Митигация в MVP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Клиент правит карточку перед подачей</td>
+<td>Завышенная выручка, «причёсанные» назначения</td>
+<td>Контроль целостности V1–V2; в v2 — сверка с банковскими оборотами</td>
+</tr>
+<tr>
+<td>Правила не покрывают отраслевую специфику</td>
+<td>Рост <code>UNCLASSIFIED</code></td>
+<td>Порог 15 % с уходом в ручной разбор; справочник в отдельном модуле для быстрой донастройки</td>
+</tr>
+<tr>
+<td>Ложное срабатывание транзитного детектора у дистрибуции с коротким циклом</td>
+<td>Занижение лимита у здорового клиента</td>
+<td>Исключение операционных категорий из сопоставления; транзит только флаг + вычет, не автоотказ до 60 %</td>
+</tr>
+<tr>
+<td>Экспертные пороги не проверены на данных</td>
+<td>Систематическое смещение лимита</td>
+<td>Все пороги в одном конфиге, журнал решений для последующей валидации</td>
+</tr>
+<tr>
+<td>Восприятие как чёрного ящика</td>
+<td>Отторжение андеррайтерами</td>
+<td>Сквозная трассируемость и раскрытие каждой цифры до строк файла</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><strong>Конец ТЗ</strong></p>
+<hr />
+<h2 id="_1">Приложение А. Отклонения реализации от исходного ТЗ</h2>
+<p>Зафиксированы по итогам разработки прототипа. Каждое отклонение — следствие
+проверки на данных, а не упрощения.</p>
+<table>
+<thead>
+<tr>
+<th>№</th>
+<th>Пункт ТЗ</th>
+<th>Что изменено</th>
+<th>Причина</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>7.4. Полоса допуска транзитного сопоставления 0,90–1,10</td>
+<td>Сужена до 0,95–1,05</td>
+<td>На синтетическом наборе широкая полоса давала 11 % ложной транзитности у здоровой оптовой торговли против 8 % при узкой; детекция реальной схемы не изменилась (81 %). Дальнейшее сужение теряет схемы с комиссией выше 5 %</td>
+</tr>
+<tr>
+<td>2</td>
+<td>8.1. Состав операционного оттока</td>
+<td>Добавлены снятие наличных и перечисления в подотчёт</td>
+<td>Без них «обнальный» профиль показывал свободный поток 7 млн ₽/мес вместо 3 млн ₽ и получал завышенный ограничитель L2. Деньги физически покинули бизнес и обязаны уменьшать поток</td>
+</tr>
+<tr>
+<td>3</td>
+<td>7.4. Исключения из транзитного сопоставления</td>
+<td>Расчёты с поставщиками (счёт 60) НЕ исключаются</td>
+<td>Транзит всегда маскируется под оплату поставщикам. Защита от ложных срабатываний обеспечивается строгостью сопоставления (1:1 либо 1:N на одного контрагента), а не отсечением категории</td>
+</tr>
+<tr>
+<td>4</td>
+<td>6.2. Налоговые паттерны</td>
+<td>Из словаря удалены голые «налог» и «НДС», добавлены <code>payroll_ndfl</code> и уточнённый <code>social_contrib</code></td>
+<td>Оборот «в т.ч. НДС 20 %» присутствует в назначении почти каждого коммерческого платежа: исходный словарь относил к налогам все расчёты с поставщиками. Регрессионный тест закреплён</td>
+</tr>
+<tr>
+<td>5</td>
+<td>8.2. T7, концентрация покупателей</td>
+<td>Эквайринговые поступления исключены из расчёта концентрации</td>
+<td>За расчётами банка-эквайера стоят тысячи розничных покупателей. Без этого розница с 72 % выручки через эквайринг ложно получала красный флаг концентрации</td>
+</tr>
+<tr>
+<td>6</td>
+<td>11. API</td>
+<td>Добавлен отдельный маршрут <code>POST /upload</code> для веб-формы</td>
+<td><code>POST /api/v1/analyze</code> возвращает JSON со статусом 200 (машинный контракт), форма в браузере использует <code>/upload</code> с редиректом 303 на отчёт</td>
+</tr>
+<tr>
+<td>7</td>
+<td>4.3. Структура проекта</td>
+<td>Добавлены <code>potok51/pipeline.py</code>, <code>potok51/storage.py</code>, <code>potok51/report/charts.py</code></td>
+<td>Оркестрация, SQLite-индекс анализов и генерация встроенных SVG вынесены из API и шаблона</td>
+</tr>
+<tr>
+<td>8</td>
+<td>4.2. Стек</td>
+<td>pandas не используется</td>
+<td>Достаточно openpyxl и стандартной библиотеки; отказ уменьшает образ и время холодного старта</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_2">Фактические метрики на синтетическом наборе</h3>
+<table>
+<thead>
+<tr>
+<th>Метрика</th>
+<th>Цель ТЗ</th>
+<th>Факт</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Доля оборота, размеченная правилами</td>
+<td>≥ 95 %</td>
+<td>100 % на всех восьми профилях</td>
+</tr>
+<tr>
+<td>Время анализа карточки за 12 мес</td>
+<td>≤ 20 с</td>
+<td>0,6–1,5 с (600–800 операций)</td>
+</tr>
+<tr>
+<td>Совпадение решения с замыслом профиля</td>
+<td>8 из 8</td>
+<td>8 из 8</td>
+</tr>
+<tr>
+<td>Автоматических решений без андеррайтера</td>
+<td>STR ≥ 60 %</td>
+<td>25 % (2 из 8) — набор намеренно смещён в сторону проблемных профилей</td>
+</tr>
+<tr>
+<td>Тестов</td>
+<td>—</td>
+<td>125, все проходят</td>
+</tr>
+</tbody>
+</table>
+<p>Показатель STR на синтетике не репрезентативен: из восьми профилей три «плохих» и три
+пограничных по построению. На реальном потоке заявок он измеряется заново.</p>
+</main></div>
+<script>
+  const links=[...document.querySelectorAll('nav a')];
+  const secs=links.map(a=>document.querySelector(a.getAttribute('href'))).filter(Boolean);
+  const bar=document.getElementById('pr');
+  new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)
+    links.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}),
+    {rootMargin:'-12% 0px -80% 0px'}).observe && secs.forEach(s=>
+      new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)
+        links.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id));}),
+        {rootMargin:'-12% 0px -80% 0px'}).observe(s));
+  addEventListener('scroll',()=>{const h=document.documentElement;
+    bar.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';},{passive:true});
+</script>
+</body></html>

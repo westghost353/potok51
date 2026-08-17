@@ -1,0 +1,19 @@
+[Unit]
+Description=Potok51 - credit limit engine over 1C account 51 card
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/potok51/deploy
+ExecStart=/usr/bin/docker compose up -d --build
+ExecStop=/usr/bin/docker compose down
+ExecReload=/usr/bin/docker compose up -d --build
+TimeoutStartSec=600
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
